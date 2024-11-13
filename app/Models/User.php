@@ -11,7 +11,7 @@ class User extends Authenticatable
     use HasApiTokens, Notifiable;
 
     protected $fillable = [
-        'username',
+        'name',
         'email',
         'password',
         'role',
@@ -22,35 +22,10 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    public function profile()
-    {
-        return $this->hasOne(Profile::class);
-    }
-
-    public function jobPosts()
-    {
-        return $this->hasMany(JobPost::class, 'employer_id');
-    }
-
-    public function applications()
-    {
-        return $this->hasMany(Application::class, 'job_seeker_id');
-    }
-
-    public function givenRatings()
-    {
-        return $this->hasMany(Rating::class, 'job_seeker_id');
-    }
-
-    public function receivedRatings()
-    {
-        return $this->hasMany(Rating::class, 'employer_id');
-    }
-
-    public function adminLogs()
-    {
-        return $this->hasMany(AdminLog::class, 'admin_id');
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
 
     public function isAdmin()
     {

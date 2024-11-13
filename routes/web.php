@@ -1,60 +1,52 @@
 <?php
 
-use App\Http\Controllers\Admin\UserManagementController;
-use App\Http\Controllers\Employer\JobPostController;
-use App\Http\Controllers\Employer\ApplicantController;
-use App\Http\Controllers\JobSeeker\ProfileController as JobSeekerProfileController;
-use App\Http\Controllers\JobSeeker\ApplicationController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\RatingController;
+use App\Http\Controllers\JobPostController;
+use App\Http\Controllers\JobSeekerProfileController;
+use App\Http\Controllers\JobApplicationController;
+use App\Http\Controllers\EmployerDashboardController;
+use App\Http\Controllers\JobSeekerDashboardController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\UserController;
+use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Facades\Route;
 
-// Public Routes
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::get('/', [JobPostController::class, 'index'])->name('home');
-Route::get('/jobs/{jobPost}', [JobPostController::class, 'show'])->name('jobs.show');
-
-// Authenticated Routes
+// Routes yang membutuhkan autentikasi
 Route::middleware(['auth'])->group(function () {
-    // Profile Routes
+    // Dashboard redirect
+    Route::get('/dashboard', function () {
+        $user = auth()->user();
+        
+        switch($user->role) {
+            case 'admin':
+                return redirect()->route('admin.dashboard');
+            case 'employer':
+                return redirect()->route('employer.dashboard');
+            default:
+                return redirect()->route('job-seeker.dashboard');
+        }
+    })->name('dashboard');
+
+    // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Admin Routes
-    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
-        Route::resource('users', UserManagementController::class);
-    });
+    // Job Seeker Routes
+    Route::get('/job-seeker/dashboard', [JobSeekerDashboardController::class, 'index'])
+        ->name('job-seeker.dashboard');
 
     // Employer Routes
-    Route::middleware(['employer'])->prefix('employer')->name('employer.')->group(function () {
-        Route::resource('jobs', JobPostController::class);
-        Route::get('jobs/{jobPost}/applicants', [ApplicantController::class, 'index'])->name('jobs.applicants');
-        Route::patch('applications/{application}/status', [ApplicantController::class, 'updateStatus'])->name('applications.status');
-    });
+    Route::get('/employer/dashboard', [EmployerDashboardController::class, 'index'])
+        ->name('employer.dashboard');
 
-    // Job Seeker Routes
-    Route::middleware(['jobseeker'])->prefix('jobseeker')->name('jobseeker.')->group(function () {
-        Route::get('profile', [JobSeekerProfileController::class, 'show'])->name('profile.show');
-        Route::get('profile/create', [JobSeekerProfileController::class, 'create'])->name('profile.create');
-        Route::post('profile', [JobSeekerProfileController::class, 'store'])->name('profile.store');
-        Route::get('profile/edit', [JobSeekerProfileController::class, 'edit'])->name('profile.edit');
-        Route::put('profile', [JobSeekerProfileController::class, 'update'])->name('profile.update');
-        
-        Route::get('applications', [ApplicationController::class, 'index'])->name('applications.index');
-        Route::post('jobs/{jobPost}/apply', [ApplicationController::class, 'store'])->name('applications.store');
-    });
-
-    // Rating Routes
-    Route::post('ratings', [RatingController::class, 'store'])->name('ratings.store')->middleware('jobseeker');
+    // Admin Routes
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])
+        ->name('admin.dashboard');
 });
 
-// Authentication Routes
 require __DIR__.'/auth.php';

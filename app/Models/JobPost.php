@@ -2,18 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class JobPost extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'employer_id',
         'title',
         'location',
-        'job_type',
+        'type',
         'contact',
         'description',
-        'salary_range',
+        'salary_min',
+        'salary_max',
+        'is_active'
     ];
 
     public function employer()
@@ -23,6 +28,6 @@ class JobPost extends Model
 
     public function applications()
     {
-        return $this->hasMany(Application::class);
+        return $this->hasMany(JobApplication::class);
     }
 }
