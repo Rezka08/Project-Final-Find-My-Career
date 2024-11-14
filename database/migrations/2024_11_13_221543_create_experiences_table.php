@@ -11,21 +11,25 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('skills', function (Blueprint $table) {
+        Schema::create('experiences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('job_seeker_profile_id')->constrained()->onDelete('cascade');
-            $table->string('name');
-            $table->enum('level', ['beginner', 'intermediate', 'advanced', 'expert']);
-            $table->string('certificate_path')->nullable();
+            $table->string('company_name');
+            $table->string('position');
+            $table->date('start_date');
+            $table->date('end_date')->nullable();
+            $table->boolean('is_current')->default(false);
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }
+
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('skills');
+        Schema::dropIfExists('experiences');
     }
 };

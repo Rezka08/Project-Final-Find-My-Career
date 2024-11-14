@@ -2,18 +2,20 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\JobPostController;
-use App\Http\Controllers\JobSeekerProfileController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\EmployerDashboardController;
 use App\Http\Controllers\JobSeekerDashboardController;
 use App\Http\Controllers\AdminDashboardController;
-use App\Http\Controllers\UserController;
-use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\JobSeekerProfileController;
 
+// Public Routes
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Tambahkan public job listing route
+Route::get('/browse-jobs', [JobPostController::class, 'publicIndex'])->name('jobs.browse');
 
 // Routes yang membutuhkan autentikasi
 Route::middleware(['auth'])->group(function () {
@@ -21,13 +23,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
         $user = auth()->user();
         
-        switch($user->role) {
-            case 'admin':
-                return redirect()->route('admin.dashboard');
-            case 'employer':
-                return redirect()->route('employer.dashboard');
-            default:
-                return redirect()->route('job-seeker.dashboard');
+        if ($user->role === 'employer') {
+            return redirect()->route('employer.dashboard');
+        } elseif ($user->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        } else {
+            return redirect()->route('job-seeker.dashboard');
         }
     })->name('dashboard');
 
@@ -36,17 +37,79 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Job Seeker Routes
-    Route::get('/job-seeker/dashboard', [JobSeekerDashboardController::class, 'index'])
-        ->name('job-seeker.dashboard');
+    // Route khusus untuk masing-masing role
+    Route::middleware(['auth'])->group(function() {
+        // Employer Routes
+        Route::get('/employer/dashboard', function() {
+            if(auth()->user()->role === 'employer') {
+                return view('employer.dashboard');
+            }
+            return redirect()->route('dashboard');
+        })->name('employer.dashboard');
 
-    // Employer Routes
-    Route::get('/employer/dashboard', [EmployerDashboardController::class, 'index'])
-        ->name('employer.dashboard');
+        // Job Routes (hanya untuk employer)
+        Route::prefix('jobs')->group(function () {
+            Route::get('/create', [JobPostController::class, 'create'])->name('jobs.create');
+            Route::post('/', [JobPostController::class, 'store'])->name('jobs.store');
+            Route::get('/', [JobPostController::class, 'index'])->name('jobs.index');
+            Route::get('/{job}/edit', [JobPostController::class, 'edit'])->name('jobs.edit');
+            Route::put('/{job}', [JobPostController::class, 'update'])->name('jobs.update');
+            Route::delete('/{job}', [JobPostController::class, 'destroy'])->name('jobs.destroy');
+            // Tambahkan route untuk lihat aplikasi per job
+            Route::get('/{job}/applications', [JobPostController::class, 'showApplications'])
+                ->name('jobs.applications');
+        });
 
-    // Admin Routes
-    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])
-        ->name('admin.dashboard');
+        // Job Seeker Routes
+        Route::prefix('job-seeker')->group(function () {
+            Route::get('/dashboard', function() {
+                if(auth()->user()->role === 'job_seeker') {
+                    return view('job-seeker.dashboard');
+                }
+                return redirect()->route('dashboard');
+            })->name('job-seeker.dashboard');
+
+            // Job Application Routes
+            Route::post('/jobs/{job}/apply', [JobApplicationController::class, 'apply'])
+                ->name('jobs.apply');
+            Route::get('/my-applications', [JobApplicationController::class, 'myApplications'])
+                ->name('job-seeker.applications');
+            // Dalam group middleware auth
+            Route::get('/jobs/search', [JobPostController::class, 'search'])->name('jobs.search');
+
+            Route::get('/job-seeker/profile', [JobSeekerProfileController::class, 'show'])
+                ->name('job-seeker.profile');
+            Route::get('/job-seeker/profile/edit', [JobSeekerProfileController::class, 'edit'])
+                ->name('job-seeker.profile.edit');
+            Route::put('/job-seeker/profile', [JobSeekerProfileController::class, 'update'])
+                ->name('job-seeker.profile.update');
+        });
+
+        // Admin Routes
+        Route::prefix('admin')->group(function () {
+            Route::get('/dashboard', function() {
+                if(auth()->user()->role === 'admin') {
+                    return view('admin.dashboard');
+                }
+                return redirect()->route('dashboard');
+            })->name('admin.dashboard');
+
+            // Admin management routes
+            Route::get('/users', [AdminDashboardController::class, 'users'])->name('admin.users');
+            Route::get('/jobs', [AdminDashboardController::class, 'jobs'])->name('admin.jobs');
+            Route::get('/applications', [AdminDashboardController::class, 'applications'])
+                ->name('admin.applications');
+        });
+
+        // Shared Routes (accessible by all authenticated users)
+        Route::get('/jobs/{job}', [JobPostController::class, 'show'])->name('jobs.show');
+    });
+});
+
+// Handle Job Application Status Updates
+Route::middleware(['auth'])->group(function () {
+    Route::patch('/applications/{application}/status', [JobApplicationController::class, 'updateStatus'])
+        ->name('applications.update-status');
 });
 
 require __DIR__.'/auth.php';

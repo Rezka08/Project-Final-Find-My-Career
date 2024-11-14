@@ -11,12 +11,17 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('skills', function (Blueprint $table) {
+        Schema::create('educations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('job_seeker_profile_id')->constrained()->onDelete('cascade');
-            $table->string('name');
-            $table->enum('level', ['beginner', 'intermediate', 'advanced', 'expert']);
-            $table->string('certificate_path')->nullable();
+            $table->string('institution');
+            $table->string('degree');
+            $table->string('field_of_study');
+            $table->date('start_date');
+            $table->date('end_date')->nullable();
+            $table->boolean('is_current')->default(false);
+            $table->decimal('gpa', 3, 2)->nullable();
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('skills');
+        Schema::dropIfExists('educations');
     }
 };
